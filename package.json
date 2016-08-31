@@ -1,0 +1,30 @@
+{
+  "name": "grope",
+  "version": "1.0.0",
+  "description": "Drag and Drop (grope and toss) Library for Javascript and Typescript.",
+  "main": "grope.js",
+  "scripts": {
+    "build": "npm run minify && npm run styles",
+    "minify": "uglifyjs -m -c -o dist/grope.min.js dist/grope.js",
+    "styles": "stylus grope.styl --import node_modules/nib -o dist && cleancss dist/grope.css -o dist/grope.min.css",
+    "start": "tsc && concurrently \"watchify -dvs grope -o dist/grope.js grope.js\" \"stylus -w example/example.styl --import node_modules/nib -o example\" \"stylus -w grope.styl --import node_modules/nib -o dist\" \"npm run lite\" \"npm run tsc:w\" ",
+    "lite": "lite-server",
+    "tsc": "tsc -d",
+    "tsc:w": "tsc -w",
+    "git": "git commit -a && git push origin master"
+  },
+  "author": "Roman Gruber <p1020389@yahoo.com>)",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "bower": "^1.7.9",
+    "clean-css": "^3.4.18",
+    "nib": "^1.1.0",
+    "stylus": "^0.54.5",
+    "uglify-js": "^2.7.0",
+    "watchify": "^3.7.0",
+    "concurrently": "^2.0.0",
+    "lite-server": "^2.2.0",
+    "typescript": "^1.8.10"
+  }
+}

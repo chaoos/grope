@@ -1,0 +1,10 @@
+.container {
+  width: 750px !important;
+}
+#basics_1 div,
+#basics_2 div {
+  height: 100px;
+  border: 1px solid #808080;
+  border-radius: 4px;
+  background-color: #fff;
+}
