@@ -8,6 +8,6 @@ declare var grope: any;
 
 window.onload = function () {
 
-  var basics = grope([document.getElementById("basics_1")]);
+  var basics = grope([document.getElementById("basics_1"), document.getElementById("basics_2")]);
 
 }

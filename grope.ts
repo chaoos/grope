@@ -90,11 +90,18 @@ function grope (containers: HTMLElement | Array<HTMLElement>, options = {}) {
     private gropableElements: Array<HTMLElement> = [];
     private gropeElement: HTMLElement = null;
     private gropeClone: HTMLElement = null;
+    private gropeContainer: HTMLElement = null;
+    private activeGropeContainer: HTMLElement = null;
+    private activeGropeElement: HTMLElement = null;
     private deltaX: number;
     private deltaY: number;
+    private mapping: any = []; //TODO: not any
+    private rectCache: any = []; //TODO: not any
+    private live: boolean = true;
 
     /* CSS style classes */
     public classGropable: string = 'gr-gropable';
+    public classTossZone: string = 'gr-tosszone';
     public classGroping: string = 'gr-groping';
     public classModeGroping: string = 'gr-mode-groping';
     public classDisappear: string = 'gr-disappear';
@@ -141,17 +148,26 @@ function grope (containers: HTMLElement | Array<HTMLElement>, options = {}) {
      * @return {void}
      */
     private init () {
-      for (var container of this.containers) {
+      //for (var container of this.containers) {
+      for (var i in this.containers) {
+        var container = this.containers[i];
+        this.addClass(container, this.classTossZone);
+        var a = 0;
+        this.mapping[i] = [];
         for (var el of (<any>container.querySelectorAll(this.options.elements.join(', ')))) {
           this.gropableElements.push(el);
-          el.className += " " + this.classGropable + " ";
+          this.addClass(el, this.classGropable);
+
+          this.mapping[i][a] = el;
 
           /* mousedown handler */
           var callback = (e) => this.mouseDown(e);
           var c = this.mouseDownHandlers.push(callback);
           this.addEventListener(el, 'mousedown', callback);
+          a++;
         }
       }
+      console.log(this.mapping);
     }
 
     /**
@@ -163,6 +179,18 @@ function grope (containers: HTMLElement | Array<HTMLElement>, options = {}) {
     }
 
 
+    private remap () {
+      this.mapping = [];
+      for (var i in this.containers) {
+        this.mapping[i] = [];
+        var a = 0;
+        for (var el of (<any>this.containers[i].querySelectorAll(this.options.elements.join(', ')))) {
+          this.mapping[i][a] = el;
+          a++;
+        }
+      }
+    }
+
     /**
      * Mouse down handler
      * TODO
@@ -173,25 +201,27 @@ function grope (containers: HTMLElement | Array<HTMLElement>, options = {}) {
     private mouseDown (e: MouseEvent): void {
 
       this.gropeElement = this.getElementBehindCursor(e.clientX, e.clientY);
-      console.log(typeof this.gropeElement);
-      console.log(this.gropeElement instanceof HTMLElement);
-      console.log(this.gropeElement);
       this.gropeClone = (<HTMLElement>this.gropeElement.cloneNode(true));
 
       this.copyComputedStyle(this.gropeElement, this.gropeClone);
       this.gropeClone.style.width = this.gropeElement.offsetWidth + 'px';
       this.gropeClone.style.height = this.gropeElement.offsetHeight + 'px';
 
-      this.gropeClone.className += " " + this.classGroping + " ";
-      this.gropeElement.className += " " + this.classDisappear + " ";
-      document.body.className += " " + this.classModeGroping + " ";
+      this.addClass(this.gropeClone, this.classGroping);
+      this.addClass(this.gropeElement, this.classDisappear);
+      this.addClass(document.body, this.classModeGroping);
 
-      var rect = this.gropeElement.getBoundingClientRect();
+      this.live = true;
+      this.rectCache = [];
+      var rect = this.getRect(this.gropeElement, this.live);
       this.deltaX = e.clientX - rect.left;
       this.deltaY = e.clientY - rect.top;
 
+      this.gropeContainer = this.getContainerByGropeElement(this.gropeElement);
+
       this.mouseMove(e);
-      document.body.appendChild(this.gropeClone);
+
+      this.gropeContainer.appendChild(this.gropeClone);
 
       /* mousemove handler */
       this.mouseMoveHandler = (e) => this.mouseMove(e);
@@ -215,14 +245,27 @@ function grope (containers: HTMLElement | Array<HTMLElement>, options = {}) {
       this.removeEventListener(document.documentElement, 'mousemove', this.mouseMoveHandler);
       this.removeEventListener(document.documentElement, 'mouseup', this.mouseUpHandler);
 
-      var re = new RegExp(" " + this.classDisappear + " ");
-      this.gropeElement.className = this.gropeElement.className.replace(re,'');
-      var re = new RegExp(" " + this.classModeGroping + " ");
-      document.body.className = document.body.className.replace(re,'');
+      this.removeClass(this.gropeElement, this.classDisappear);
+      this.removeClass(this.gropeElement, this.classAppear);
+      this.removeClass(this.gropeElement, this.classReappear);
+      this.removeClass(document.body, this.classModeGroping);
 
-      document.body.removeChild(this.gropeClone);
+      //this.gropeContainer.removeChild(this.gropeClone);
+      this.gropeClone.parentNode.removeChild(this.gropeClone);
+
+      for (var container of this.containers) {
+        this.removeClass(container, 'active');
+      }
+
+      for (var gropeElement of this.gropableElements) {
+        this.removeClass(gropeElement, 'active');
+      }
+
+
+      //document.body.removeChild(this.gropeClone);
       this.gropeElement = null;
       this.gropeClone = null;
+      this.gropeContainer = null;
     }
 
     /**
@@ -246,11 +289,75 @@ function grope (containers: HTMLElement | Array<HTMLElement>, options = {}) {
       this.gropeClone.style.left = (x - this.deltaX) + 'px';
       this.gropeClone.style.top = (y - this.deltaY) + 'px';
 
-      //console.log(x, y, this.gropeClone.style.left, this.gropeClone.style.top, this.gropeElement);
+      var found = false;
+      for (var gropeElement of this.gropableElements) {
+        var coords = this.getRect(gropeElement, this.live);
+        if (found === false
+            && x >= (<any>coords).left
+            && x <= (gropeElement.offsetWidth * (1/2) + (<any>coords).left)
+            && y >= (<any>coords).top
+            && y <= (gropeElement.offsetHeight + (<any>coords).top)) {
+          this.addClass(gropeElement, 'active')
+          this.activeGropeElement = gropeElement;
+          this.activeGropeContainer = this.getContainerByGropeElement(this.activeGropeElement);    
+          this.addClass(this.activeGropeContainer, 'active')
+          this.activeGropeContainer.insertBefore(this.gropeElement, this.activeGropeElement);
+          this.remap();
+          //TODO: always on mousemove -> performance?
+          found = true;
+        } else if (found === false
+            && x >= (<any>coords).left + (gropeElement.offsetWidth * (1/2))
+            && x <= (gropeElement.offsetWidth + (<any>coords).left)
+            && y >= (<any>coords).top
+            && y <= (gropeElement.offsetHeight + (<any>coords).top)) {
+          this.addClass(gropeElement, 'active')
+          this.activeGropeElement = gropeElement;
+          this.activeGropeContainer = this.getContainerByGropeElement(this.activeGropeElement);
+          this.addClass(this.activeGropeContainer, 'active')
+          this.activeGropeContainer.insertBefore(this.gropeElement, this.activeGropeElement.nextSibling);
+          this.remap();
+          found = true;
+        } else {
+          this.removeClass(gropeElement, 'active')
+        }
+      }
+
+      if (found === false) {
+        for (var container of this.containers) {
+          var coords = this.getRect(container, this.live);
+          if (found === false
+              && x >= (<any>coords).left
+              && x <= (container.offsetWidth + (<any>coords).left)
+              && y >= (<any>coords).top
+              && y <= (container.offsetHeight + (<any>coords).top)) {
+            this.addClass(container, 'active')
+            this.activeGropeContainer = container;
+            this.activeGropeContainer.appendChild(this.gropeElement);
+            this.activeGropeContainer.appendChild(this.gropeClone);
+            this.remap();            
+            found = true;
+          } else {
+            this.removeClass(container, 'active')
+          }
+        }
+      }
+      this.live = false;
+    }
+
+    private getRect (el: HTMLElement, live = false) {
+      if (live === false) {
+        for (var data of this.rectCache) {
+          if (data.object == el) {
+            return data.rect;
+          }
+        }
+      }
+      var rect = el.getBoundingClientRect();
+      this.rectCache.push({ object: el, rect: rect});
+      return rect;
     }
 
     private copyComputedStyle (from, to) {
-
       var computedStyle = false;
       computedStyle = from.currentStyle || document.defaultView.getComputedStyle(from, null);
       if (!computedStyle) {return null};
@@ -267,10 +374,47 @@ function grope (containers: HTMLElement | Array<HTMLElement>, options = {}) {
       }
     }
 
+    private addClass (el: HTMLElement, cssClass: string) {
+      var re = new RegExp(" " + cssClass + " ");
+      if (!el.className.match(re)) {
+        el.className += " " + cssClass + " ";
+      }
+    }
+
+    private removeClass (el: HTMLElement, cssClass: string) {
+      var re = new RegExp(" " + cssClass + " ", 'g');
+      el.className = el.className.replace(re,'');
+    }
+
+    private getOffsetCoordsByElement (el: HTMLElement) {
+      var left = 0;
+      var top = 0;
+      while (el) {
+
+        if (window.getComputedStyle(el, null).getPropertyValue('position') != "relative") {
+          left += el.offsetLeft;
+          top += el.offsetTop;
+        }
+        el = el.parentElement;
+      }
+      return [left, top];
+    }
+
+    private getContainerByGropeElement (el: HTMLElement) {
+      for (var i in this.mapping) {
+        for (var gropeElement of this.mapping[i]) {
+          if (gropeElement == el) {
+            return this.containers[i];
+          }
+        }
+      }
+      return false;
+    }
+
     private getElementBehindCursor (x: number, y: number) {
       var elementBehindCursor = <HTMLElement>document.elementFromPoint(x, y);
 
-      /* find the next parent which is an inner element */
+      /* find the next parent which is an gropable element */
       var innerRe = new RegExp(" " + this.classGropable + " ");
       while (elementBehindCursor && !elementBehindCursor.className.match(innerRe)) {
         elementBehindCursor = elementBehindCursor.parentElement;
@@ -279,6 +423,7 @@ function grope (containers: HTMLElement | Array<HTMLElement>, options = {}) {
     }
 
     private getDropzoneBehindCursor (x: number, y: number) {
+      //console.log((<HTMLElement>this.gropeElement).elementFromPoint(x, y));
       return;
     }
 

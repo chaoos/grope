@@ -5,6 +5,9 @@
   cursor url(grab.cur), default
   opacity 1
 
+.gr-gropable.active
+  border 1px solid red !important
+
 .gr-mode-groping, .gr-mode-groping *
   user-select none
   cursor grabbing
@@ -15,6 +18,7 @@
 .gr-groping
   opacity 0.7 !important
   position fixed !important
+  z-index 1 !important
 
 .gr-disappear
   opacity 0.3 !important
@@ -33,3 +37,6 @@
   background-color blue !important
   transition opacity 1s linear
   transition background-color 1s linear
+
+.gr-tosszone.active
+  background-color #f2dede !important

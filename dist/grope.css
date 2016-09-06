@@ -7,6 +7,9 @@
   -ms-filter: none;
   filter: none;
 }
+.gr-gropable.active {
+  border: 1px solid #f00 !important;
+}
 .gr-mode-groping,
 .gr-mode-groping * {
   -webkit-user-select: none;
@@ -23,6 +26,7 @@
   -ms-filter: "progid:DXImageTransform.Microsoft.Alpha(Opacity=70)" !important;
   filter: alpha(opacity=70) !important;
   position: fixed !important;
+  z-index: 1 !important;
 }
 .gr-disappear {
   opacity: 0.3 !important;
@@ -71,4 +75,7 @@
   -o-transition: background-color 1s linear;
   -ms-transition: background-color 1s linear;
   transition: background-color 1s linear;
+}
+.gr-tosszone.active {
+  background-color: #f2dede !important;
 }
