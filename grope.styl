@@ -1,42 +1,24 @@
-.gr-gropable
+.gr-gropable.move
   cursor grab
   cursor -moz-grab
   cursor -webkit-grab
   cursor url(grab.cur), default
-  opacity 1
 
-.gr-gropable.active
-  border 1px solid red !important
+.gr-gropable.copy
+  cursor copy
 
 .gr-mode-groping, .gr-mode-groping *
   user-select none
+
+.gr-groping
+  position fixed !important
+  z-index 1 !important
+
+.gr-groping.copy, .gr-mode-groping.copy, .gr-mode-groping.copy *
+  cursor alias
+
+.gr-groping.move, .gr-mode-groping.move, .gr-mode-groping.move *
   cursor grabbing
   cursor -moz-grabbing
   cursor -webkit-grabbing
   cursor url(grabbing.cur), default
-
-.gr-groping
-  opacity 0.7 !important
-  position fixed !important
-  z-index 1 !important
-
-.gr-disappear
-  opacity 0.3 !important
-  background-color red !important
-  transition opacity 1s linear
-  transition background-color 1s linear
-
-.gr-appear
-  opacity 0.3 !important
-  background-color green !important
-  transition opacity 1s linear
-  transition background-color 1s linear
-
-.gr-reappear
-  opacity 0.3 !important
-  background-color blue !important
-  transition opacity 1s linear
-  transition background-color 1s linear
-
-.gr-tosszone.active
-  background-color #f2dede !important

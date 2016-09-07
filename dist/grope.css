@@ -1,14 +1,11 @@
-.gr-gropable {
+.gr-gropable.move {
   cursor: grab;
   cursor: -moz-grab;
   cursor: -webkit-grab;
   cursor: url("grab.cur"), default;
-  opacity: 1;
-  -ms-filter: none;
-  filter: none;
 }
-.gr-gropable.active {
-  border: 1px solid #f00 !important;
+.gr-gropable.copy {
+  cursor: copy;
 }
 .gr-mode-groping,
 .gr-mode-groping * {
@@ -16,66 +13,21 @@
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
+}
+.gr-groping {
+  position: fixed !important;
+  z-index: 1 !important;
+}
+.gr-groping.copy,
+.gr-mode-groping.copy,
+.gr-mode-groping.copy * {
+  cursor: alias;
+}
+.gr-groping.move,
+.gr-mode-groping.move,
+.gr-mode-groping.move * {
   cursor: grabbing;
   cursor: -moz-grabbing;
   cursor: -webkit-grabbing;
   cursor: url("grabbing.cur"), default;
-}
-.gr-groping {
-  opacity: 0.7 !important;
-  -ms-filter: "progid:DXImageTransform.Microsoft.Alpha(Opacity=70)" !important;
-  filter: alpha(opacity=70) !important;
-  position: fixed !important;
-  z-index: 1 !important;
-}
-.gr-disappear {
-  opacity: 0.3 !important;
-  -ms-filter: "progid:DXImageTransform.Microsoft.Alpha(Opacity=30)" !important;
-  filter: alpha(opacity=30) !important;
-  background-color: #f00 !important;
-  -webkit-transition: opacity 1s linear;
-  -moz-transition: opacity 1s linear;
-  -o-transition: opacity 1s linear;
-  -ms-transition: opacity 1s linear;
-  transition: opacity 1s linear;
-  -webkit-transition: background-color 1s linear;
-  -moz-transition: background-color 1s linear;
-  -o-transition: background-color 1s linear;
-  -ms-transition: background-color 1s linear;
-  transition: background-color 1s linear;
-}
-.gr-appear {
-  opacity: 0.3 !important;
-  -ms-filter: "progid:DXImageTransform.Microsoft.Alpha(Opacity=30)" !important;
-  filter: alpha(opacity=30) !important;
-  background-color: #008000 !important;
-  -webkit-transition: opacity 1s linear;
-  -moz-transition: opacity 1s linear;
-  -o-transition: opacity 1s linear;
-  -ms-transition: opacity 1s linear;
-  transition: opacity 1s linear;
-  -webkit-transition: background-color 1s linear;
-  -moz-transition: background-color 1s linear;
-  -o-transition: background-color 1s linear;
-  -ms-transition: background-color 1s linear;
-  transition: background-color 1s linear;
-}
-.gr-reappear {
-  opacity: 0.3 !important;
-  -ms-filter: "progid:DXImageTransform.Microsoft.Alpha(Opacity=30)" !important;
-  filter: alpha(opacity=30) !important;
-  background-color: #00f !important;
-  -webkit-transition: opacity 1s linear;
-  -moz-transition: opacity 1s linear;
-  -o-transition: opacity 1s linear;
-  -ms-transition: opacity 1s linear;
-  transition: opacity 1s linear;
-  -webkit-transition: background-color 1s linear;
-  -moz-transition: background-color 1s linear;
-  -o-transition: background-color 1s linear;
-  -ms-transition: background-color 1s linear;
-  transition: background-color 1s linear;
-}
-.gr-tosszone.active {
-  background-color: #f2dede !important;
 }

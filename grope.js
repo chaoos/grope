@@ -82,30 +82,40 @@
             function Grope(containers, options) {
                 this.containers = containers;
                 this.options = options;
-                this.gropableElements = [];
                 this.gropeElement = null;
                 this.gropeClone = null;
                 this.gropeContainer = null;
-                this.activeGropeContainer = null;
-                this.activeGropeElement = null;
-                this.mapping = []; //TODO: not any
-                this.rectCache = []; //TODO: not any
-                this.live = true;
+                this.originGropeContainer = null;
+                this.copyElement = null;
+                this.mapping = [];
+                this.originMapping = [];
+                this.rectCache = [];
                 /* CSS style classes */
                 this.classGropable = 'gr-gropable';
                 this.classTossZone = 'gr-tosszone';
                 this.classGroping = 'gr-groping';
                 this.classModeGroping = 'gr-mode-groping';
+                this.classMove = 'move';
+                this.classCopy = 'copy';
                 this.classDisappear = 'gr-disappear';
-                this.classAppear = 'gr-appear';
-                this.classReappear = 'gr-reappear';
                 this.mouseDownHandlers = [];
                 /* array holding the custom events mapping callbacks to bound callbacks */
                 this.customEvents = [];
                 this.containers = containers;
                 /* set default options */
                 this.options = {
-                    elements: ['div']
+                    /* CSS class selector to match elements which should become dragable inside the containers */
+                    elements: ['div'],
+                    /* A callback returning true or false whether the element is allowed to drop. The drag will be
+                     * reverted if this returns false. The callback will be invoked with the following parameters:
+                     *   @param {HTMLElement} element - the dragged element (optional).
+                     *   @param {HTMLElement} from - the container where the element is from (optional).
+                     *   @param {HTMLElement} to - the target container (optional).
+                     *   @return {boolean} - whether draging is allowed or not.
+                     */
+                    tossCallback: function () { return true; },
+                    /* TODO: with keydown and keyup */
+                    copy: false
                 };
                 /* merge the default option objects with the provided one */
                 for (var key in options) {
@@ -138,17 +148,15 @@
                     this.mapping[i] = [];
                     for (var _i = 0, _a = container.querySelectorAll(this.options.elements.join(', ')); _i < _a.length; _i++) {
                         var el = _a[_i];
-                        this.gropableElements.push(el);
                         this.addClass(el, this.classGropable);
+                        this.addClass(el, this.options.copy ? this.classCopy : this.classMove);
                         this.mapping[i][a] = el;
                         /* mousedown handler */
                         var callback = function (e) { return _this.mouseDown(e); };
-                        var c = this.mouseDownHandlers.push(callback);
                         this.addEventListener(el, 'mousedown', callback);
                         a++;
                     }
                 }
-                console.log(this.mapping);
             };
             /**
              * Reinitialize the grope element
@@ -159,15 +167,19 @@
             };
             Grope.prototype.remap = function () {
                 this.mapping = [];
+                this.rectCache = [];
                 for (var i in this.containers) {
                     this.mapping[i] = [];
                     var a = 0;
                     for (var _i = 0, _a = this.containers[i].querySelectorAll(this.options.elements.join(', ')); _i < _a.length; _i++) {
                         var el = _a[_i];
-                        this.mapping[i][a] = el;
-                        a++;
+                        if (el !== this.gropeClone) {
+                            this.mapping[i][a] = el;
+                            a++;
+                        }
                     }
                 }
+                return this.mapping;
             };
             /**
              * Mouse down handler
@@ -178,28 +190,41 @@
              */
             Grope.prototype.mouseDown = function (e) {
                 var _this = this;
+                this.originMapping = this.remap();
                 this.gropeElement = this.getElementBehindCursor(e.clientX, e.clientY);
-                this.gropeClone = this.gropeElement.cloneNode(true);
-                this.copyComputedStyle(this.gropeElement, this.gropeClone);
-                this.gropeClone.style.width = this.gropeElement.offsetWidth + 'px';
-                this.gropeClone.style.height = this.gropeElement.offsetHeight + 'px';
-                this.addClass(this.gropeClone, this.classGroping);
-                this.addClass(this.gropeElement, this.classDisappear);
-                this.addClass(document.body, this.classModeGroping);
-                this.live = true;
-                this.rectCache = [];
-                var rect = this.getRect(this.gropeElement, this.live);
-                this.deltaX = e.clientX - rect.left;
-                this.deltaY = e.clientY - rect.top;
                 this.gropeContainer = this.getContainerByGropeElement(this.gropeElement);
-                this.mouseMove(e);
-                this.gropeContainer.appendChild(this.gropeClone);
-                /* mousemove handler */
-                this.mouseMoveHandler = function (e) { return _this.mouseMove(e); };
-                this.addEventListener(document.documentElement, 'mousemove', this.mouseMoveHandler);
-                /* mousemove handler */
-                this.mouseUpHandler = function (e) { return _this.mouseUp(e); };
-                this.addEventListener(document.documentElement, 'mouseup', this.mouseUpHandler);
+                this.originGropeContainer = this.gropeContainer;
+                if (this.gropeContainer != null) {
+                    if (this.options.copy === true) {
+                        this.copyElement = this.gropeElement;
+                        this.gropeElement = this.gropeElement.cloneNode(true);
+                        ;
+                        this.gropeContainer.insertBefore(this.gropeElement, this.copyElement);
+                        var callback = function (e) { return _this.mouseDown(e); };
+                        this.addEventListener(this.gropeElement, 'mousedown', callback);
+                        this.remap();
+                    }
+                    this.gropeClone = this.gropeElement.cloneNode(true);
+                    //TODO maybe not neccessary (copyComputedStyle), because cloneElement will be in the same parent
+                    //this.copyComputedStyle(this.gropeElement, this.gropeClone);
+                    this.gropeClone.style.width = this.gropeElement.offsetWidth + 'px';
+                    this.gropeClone.style.height = this.gropeElement.offsetHeight + 'px';
+                    this.addClass(this.gropeClone, this.classGroping);
+                    this.addClass(this.gropeElement, this.classDisappear);
+                    this.addClass(document.body, this.classModeGroping);
+                    this.addClass(document.body, this.options.copy ? this.classCopy : this.classMove);
+                    var rect = this.getRect(this.gropeElement, true);
+                    this.deltaX = e.clientX - rect.left;
+                    this.deltaY = e.clientY - rect.top;
+                    this.mouseMove(e);
+                    this.gropeContainer.appendChild(this.gropeClone);
+                    /* mousemove handler */
+                    this.mouseMoveHandler = function (e) { return _this.mouseMove(e); };
+                    this.addEventListener(document.documentElement, 'mousemove', this.mouseMoveHandler);
+                    /* mouseup handler */
+                    this.mouseUpHandler = function (e) { return _this.mouseUp(e); };
+                    this.addEventListener(document.documentElement, 'mouseup', this.mouseUpHandler);
+                }
             };
             /**
              * Mouse up handler
@@ -212,23 +237,21 @@
                 this.removeEventListener(document.documentElement, 'mousemove', this.mouseMoveHandler);
                 this.removeEventListener(document.documentElement, 'mouseup', this.mouseUpHandler);
                 this.removeClass(this.gropeElement, this.classDisappear);
-                this.removeClass(this.gropeElement, this.classAppear);
-                this.removeClass(this.gropeElement, this.classReappear);
                 this.removeClass(document.body, this.classModeGroping);
-                //this.gropeContainer.removeChild(this.gropeClone);
+                this.removeClass(document.body, this.classCopy);
+                this.removeClass(document.body, this.classMove);
                 this.gropeClone.parentNode.removeChild(this.gropeClone);
                 for (var _i = 0, _a = this.containers; _i < _a.length; _i++) {
                     var container = _a[_i];
                     this.removeClass(container, 'active');
                 }
-                for (var _b = 0, _c = this.gropableElements; _b < _c.length; _b++) {
-                    var gropeElement = _c[_b];
-                    this.removeClass(gropeElement, 'active');
+                if (this.options.tossCallback(this.gropeElement, this.originGropeContainer, this.gropeContainer) === false) {
+                    this.revertChanges();
                 }
-                //document.body.removeChild(this.gropeClone);
                 this.gropeElement = null;
                 this.gropeClone = null;
                 this.gropeContainer = null;
+                this.copyElement = null;
             };
             /**
              * Mouse move handler
@@ -243,67 +266,89 @@
                     this.mouseUp(e);
                     return;
                 }
+                var container;
                 var x = e.clientX;
                 var y = e.clientY;
                 this.gropeClone.style.left = (x - this.deltaX) + 'px';
                 this.gropeClone.style.top = (y - this.deltaY) + 'px';
                 var found = false;
-                for (var _i = 0, _a = this.gropableElements; _i < _a.length; _i++) {
-                    var gropeElement = _a[_i];
-                    var coords = this.getRect(gropeElement, this.live);
-                    if (found === false
-                        && x >= coords.left
-                        && x <= (gropeElement.offsetWidth * (1 / 2) + coords.left)
-                        && y >= coords.top
-                        && y <= (gropeElement.offsetHeight + coords.top)) {
-                        this.addClass(gropeElement, 'active');
-                        this.activeGropeElement = gropeElement;
-                        this.activeGropeContainer = this.getContainerByGropeElement(this.activeGropeElement);
-                        this.addClass(this.activeGropeContainer, 'active');
-                        this.activeGropeContainer.insertBefore(this.gropeElement, this.activeGropeElement);
-                        this.remap();
-                        //TODO: always on mousemove -> performance?
-                        found = true;
-                    }
-                    else if (found === false
-                        && x >= coords.left + (gropeElement.offsetWidth * (1 / 2))
-                        && x <= (gropeElement.offsetWidth + coords.left)
-                        && y >= coords.top
-                        && y <= (gropeElement.offsetHeight + coords.top)) {
-                        this.addClass(gropeElement, 'active');
-                        this.activeGropeElement = gropeElement;
-                        this.activeGropeContainer = this.getContainerByGropeElement(this.activeGropeElement);
-                        this.addClass(this.activeGropeContainer, 'active');
-                        this.activeGropeContainer.insertBefore(this.gropeElement, this.activeGropeElement.nextSibling);
-                        this.remap();
-                        found = true;
-                    }
-                    else {
-                        this.removeClass(gropeElement, 'active');
+                for (var i in this.mapping) {
+                    for (var _i = 0, _a = this.mapping[i]; _i < _a.length; _i++) {
+                        var gropeElement = _a[_i];
+                        var coords = this.getRect(gropeElement);
+                        if (found === false
+                            && x >= coords.left
+                            && x <= (gropeElement.offsetWidth + coords.left)
+                            && y >= coords.top
+                            && y <= (gropeElement.offsetHeight + coords.top)) {
+                            found = true;
+                            container = this.getContainerByGropeElement(gropeElement);
+                            this.addClass(container, 'active');
+                            if (gropeElement != this.gropeElement) {
+                                var pos = this.gropeElement.compareDocumentPosition(gropeElement);
+                                if (pos == Node.DOCUMENT_POSITION_PRECEDING) {
+                                    container.insertBefore(this.gropeElement, gropeElement);
+                                    this.gropeContainer = container;
+                                    this.remap();
+                                }
+                                else if (pos == Node.DOCUMENT_POSITION_FOLLOWING) {
+                                    container.insertBefore(this.gropeElement, gropeElement.nextSibling);
+                                    this.gropeContainer = container;
+                                    this.remap();
+                                }
+                            }
+                        }
                     }
                 }
                 if (found === false) {
                     for (var _b = 0, _c = this.containers; _b < _c.length; _b++) {
-                        var container = _c[_b];
-                        var coords = this.getRect(container, this.live);
+                        container = _c[_b];
+                        var coords = this.getRect(container);
+                        /* if the element is held over a container element, but not an other grope element,
+                         * it should be appended to that container */
                         if (found === false
                             && x >= coords.left
                             && x <= (container.offsetWidth + coords.left)
                             && y >= coords.top
                             && y <= (container.offsetHeight + coords.top)) {
-                            this.addClass(container, 'active');
-                            this.activeGropeContainer = container;
-                            this.activeGropeContainer.appendChild(this.gropeElement);
-                            this.activeGropeContainer.appendChild(this.gropeClone);
-                            this.remap();
                             found = true;
+                            this.addClass(container, 'active');
+                            if (container != this.gropeContainer) {
+                                container.appendChild(this.gropeElement);
+                                container.appendChild(this.gropeClone);
+                                this.gropeContainer = container;
+                                this.remap();
+                            }
                         }
                         else {
                             this.removeClass(container, 'active');
                         }
                     }
                 }
-                this.live = false;
+            };
+            Grope.prototype.revertChanges = function () {
+                //TODO: revert multiple changes
+                this.revertCopy();
+            };
+            Grope.prototype.revertMove = function () {
+                for (var i in this.originMapping) {
+                    for (var a in this.originMapping[i]) {
+                        if (this.originMapping[i][a] == this.gropeElement) {
+                            this.getContainerByGropeElement(this.gropeElement).removeChild(this.gropeElement);
+                            var list = this.originGropeContainer.querySelectorAll(this.options.elements.join(', '));
+                            this.originGropeContainer.insertBefore(this.gropeElement, list[a]);
+                            return;
+                        }
+                    }
+                }
+            };
+            Grope.prototype.revertCopy = function () {
+                if (this.copyElement !== null) {
+                    this.getContainerByGropeElement(this.gropeElement).removeChild(this.gropeElement);
+                    this.gropeElement = this.copyElement;
+                    this.copyElement = null;
+                }
+                this.revertMove();
             };
             Grope.prototype.getRect = function (el, live) {
                 if (live === void 0) { live = false; }
@@ -339,8 +384,7 @@
                 }
             };
             Grope.prototype.addClass = function (el, cssClass) {
-                var re = new RegExp(" " + cssClass + " ");
-                if (!el.className.match(re)) {
+                if (!this.hasClass(el, cssClass)) {
                     el.className += " " + cssClass + " ";
                 }
             };
@@ -348,17 +392,9 @@
                 var re = new RegExp(" " + cssClass + " ", 'g');
                 el.className = el.className.replace(re, '');
             };
-            Grope.prototype.getOffsetCoordsByElement = function (el) {
-                var left = 0;
-                var top = 0;
-                while (el) {
-                    if (window.getComputedStyle(el, null).getPropertyValue('position') != "relative") {
-                        left += el.offsetLeft;
-                        top += el.offsetTop;
-                    }
-                    el = el.parentElement;
-                }
-                return [left, top];
+            Grope.prototype.hasClass = function (el, cssClass) {
+                var re = new RegExp(" " + cssClass + " ");
+                return el.className.match(re) !== null;
             };
             Grope.prototype.getContainerByGropeElement = function (el) {
                 for (var i in this.mapping) {
@@ -369,20 +405,15 @@
                         }
                     }
                 }
-                return false;
+                return null;
             };
             Grope.prototype.getElementBehindCursor = function (x, y) {
                 var elementBehindCursor = document.elementFromPoint(x, y);
                 /* find the next parent which is an gropable element */
-                var innerRe = new RegExp(" " + this.classGropable + " ");
-                while (elementBehindCursor && !elementBehindCursor.className.match(innerRe)) {
+                while (elementBehindCursor && !this.hasClass(elementBehindCursor, this.classGropable)) {
                     elementBehindCursor = elementBehindCursor.parentElement;
                 }
                 return elementBehindCursor;
-            };
-            Grope.prototype.getDropzoneBehindCursor = function (x, y) {
-                //console.log((<HTMLElement>this.gropeElement).elementFromPoint(x, y));
-                return;
             };
             /**
              * Browser independent event registration
@@ -522,6 +553,7 @@
             };
             /**
              * Register custom event callbacks
+             * @TODO
              *
              * @param {string} event - The event name
              * @param {(e: Event) => any} callback - A callback function to execute when the event raises
@@ -532,6 +564,7 @@
             };
             /**
              * Deregister custom event callbacks
+             * @TODO
              *
              * @param {string} event - The event name
              * @param {(e: Event) => any} callback - A callback function to execute when the event raises
@@ -542,6 +575,7 @@
             };
             /**
              * Revert all DOM manipulations and deregister all event handlers
+             * @TODO
              *
              * @return {void}
              */
